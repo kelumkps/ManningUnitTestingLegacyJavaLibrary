@@ -26,6 +26,7 @@ public class BugsTest {
         var missing = givenAssetInResultsWithVendor(partnerVendor);
         var assetFromAnother = givenAssetInResultsWithVendor(anotherPartnerVendor);
         List<Asset> expected = new ArrayList<>();
+        expected.add(missing);
         expected.add(givenAssetInResultsWithVendor(partnerVendor));
         expected.add(givenAssetInResultsWithVendor(partnerVendor));
         expected.add(givenAssetInResultsWithVendor(partnerVendor));
@@ -33,7 +34,7 @@ public class BugsTest {
 
         whenOptimize();
 
-        thenHotspotDoesNotHave(HotspotKey.Showcase, missing);
+       // thenHotspotDoesNotHave(HotspotKey.Showcase, missing);
         thenHotspotHasExactly(HotspotKey.Showcase, expected);
     }
 

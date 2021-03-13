@@ -3,6 +3,7 @@ package com.assetco.hotspots.optimization;
 import com.assetco.search.results.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.assetco.search.results.AssetVendorRelationshipLevel.*;
 import static com.assetco.search.results.HotspotKey.*;
@@ -13,10 +14,10 @@ class RelationshipBasedOptimizer {
     public void optimize(SearchResults searchResults) {
         Iterator<Asset> iterator = searchResults.getFound().iterator();
         var showcaseFull = searchResults.getHotspot(Showcase).getMembers().size() > 0;
-        var showcaseAssets = new ArrayList<Asset>();
         var partnerAssets = new ArrayList<Asset>();
         var goldAssets = new ArrayList<Asset>();
         var silverAssets = new ArrayList<Asset>();
+        Map<String, List<Asset>> showcase = new HashMap<>();
 
         while (iterator.hasNext()) {
             Asset asset = iterator.next();
@@ -31,25 +32,17 @@ class RelationshipBasedOptimizer {
 
             // remember this partner asset
             partnerAssets.add(asset);
+            var assetsByVendor = showcase.getOrDefault(asset.getVendor().getId(), new ArrayList<>());
+            assetsByVendor.add(asset);
+            showcase.put(asset.getVendor().getId(), assetsByVendor);
 
-            // too many assets in showcase - put in top picks instead...
-            if (showcaseAssets.size() >= 5) {
-                if (Objects.equals(showcaseAssets.get(0).getVendor(), asset.getVendor()))
-                    searchResults.getHotspot(TopPicks).addMember(asset);
-            } else {
-                // if there are already assets from a different vendor but not enough to hold showcase,
-                // clear showcase
-                if (showcaseAssets.size() != 0)
-                    if (!Objects.equals(showcaseAssets.get(0).getVendor(), asset.getVendor()))
-                        if (showcaseAssets.size() < 3)
-                            showcaseAssets.clear();
-
-                // add this asset to an empty showcase or showcase with same vendor in it
-                // if there's already another vendor, that vendor should take precedence!
-                if (showcaseAssets.size() == 0 || Objects.equals(showcaseAssets.get(0).getVendor(), asset.getVendor()))
-                    showcaseAssets.add(asset);
-            }
         }
+
+        List<Asset> showcaseEligibleAssets =  showcase.values().stream().filter(l -> l.size() >= 3).findFirst().orElseGet(ArrayList::new);
+
+        // if too many assets in showcase - put in top picks instead...
+        List<Asset> showcaseAssets = showcaseEligibleAssets.stream().limit(5).collect(Collectors.toList());
+        showcaseEligibleAssets.stream().skip(4).forEach(a -> searchResults.getHotspot(TopPicks).addMember(a));
 
         // todo - this does not belong here!!!
         var highValueHotspot = searchResults.getHotspot(HighValue);
