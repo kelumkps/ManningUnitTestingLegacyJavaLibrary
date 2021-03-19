@@ -43,6 +43,8 @@ class SalesInfoBasedOptimizer {
         }
 
         for (var asset : searchResults.getFound()) {
+            if (searchResults.getHotspot(HighValue).getMembers().contains(asset))
+                continue;
             if (asset.getPurchaseInfoLast30Days().getTimesShown() >= 50000 &&
                     asset.getPurchaseInfoLast30Days().getTimesPurchased() * 125 >= asset.getPurchaseInfoLast30Days().getTimesShown())
                 searchResults.getHotspot(HighValue).addMember(asset);

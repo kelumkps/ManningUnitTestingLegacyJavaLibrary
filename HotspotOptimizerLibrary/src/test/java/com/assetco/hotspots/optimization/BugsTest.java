@@ -4,6 +4,7 @@ import com.assetco.search.results.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 import static com.assetco.hotspots.optimization.TestHelper.*;
@@ -50,6 +51,20 @@ public class BugsTest {
         whenOptimize();
 
         thenHotspotHas(HotspotKey.Highlight, expectedAssets);
+    }
+
+    @Test
+    public void itemsWithSellRatesLastDayLastMonthShouldTakeOneSlot() {
+        var vendor = makeVendor(AssetVendorRelationshipLevel.Basic);
+        var asset = new Asset(string(), string(), URI(), URI(),
+                getPurchaseInfo(50000, 50000),
+                getPurchaseInfo(4000, 4000),
+                setOfTopics(), vendor);
+        searchResults.addFound(asset);
+
+        whenOptimize();
+
+        thenHotspotHasExactly(HotspotKey.HighValue, Arrays.asList(asset));
     }
 
     private void thenHotspotHasExactly(HotspotKey showcase, List<Asset> expected) {
@@ -103,5 +118,9 @@ public class BugsTest {
 
     private AssetVendor makeVendor(AssetVendorRelationshipLevel relationshipLevel) {
         return new AssetVendor(string(), string(), relationshipLevel, anyLong());
+    }
+
+    private AssetPurchaseInfo getPurchaseInfo(int timesShown, int timesPurchased) {
+        return new AssetPurchaseInfo(timesShown, timesPurchased, new Money(new BigDecimal("0")), new Money(new BigDecimal("0")));
     }
 }
