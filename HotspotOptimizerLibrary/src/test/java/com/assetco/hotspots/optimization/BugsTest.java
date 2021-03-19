@@ -4,19 +4,19 @@ import com.assetco.search.results.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
-import java.net.URI;
 import java.util.*;
 
+import static com.assetco.hotspots.optimization.TestHelper.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BugsTest {
-    private static final Random random = new Random();
     private SearchResults searchResults;
+    private SearchResultHotspotOptimizer optimizer;
 
     @BeforeEach
     public void setup() {
         searchResults = new SearchResults();
+        optimizer = new SearchResultHotspotOptimizer();
     }
 
     @Test
@@ -34,8 +34,22 @@ public class BugsTest {
 
         whenOptimize();
 
-       // thenHotspotDoesNotHave(HotspotKey.Showcase, missing);
         thenHotspotHasExactly(HotspotKey.Showcase, expected);
+    }
+
+    @Test
+    public void lowRankedAssetsAlmostNeverHighlighted() {
+        var vendor = makeVendor(AssetVendorRelationshipLevel.Basic);
+        var topic1 = anyTopic();
+        var topic2 = anyTopic();
+        optimizer.setHotTopics(() -> Arrays.asList(topic1, topic2));
+        var expectedAssets = givenAssetsWithTopics(vendor, 2, topic2);
+        givenAssetsWithTopics(vendor, 3, topic1);
+        expectedAssets.add(givenAssetWithTopics(vendor, topic2));
+
+        whenOptimize();
+
+        thenHotspotHas(HotspotKey.Highlight, expectedAssets);
     }
 
     private void thenHotspotHasExactly(HotspotKey showcase, List<Asset> expected) {
@@ -43,6 +57,12 @@ public class BugsTest {
         Asset[] fromHotspot = hotspot.getMembers().toArray(new Asset[0]);
         Asset[] fromExpected = expected.toArray(new Asset[0]);
         assertArrayEquals(fromExpected, fromHotspot);
+    }
+
+    private void thenHotspotHas(HotspotKey hotspotKey, List<Asset> expectedAssets) {
+        for (var expectedAsset : expectedAssets) {
+            assertTrue(searchResults.getHotspot(hotspotKey).getMembers().contains(expectedAsset));
+        }
     }
 
     private void thenHotspotDoesNotHave(HotspotKey showcase, Asset... assets) {
@@ -54,7 +74,6 @@ public class BugsTest {
     }
 
     private void whenOptimize() {
-        SearchResultHotspotOptimizer optimizer = new SearchResultHotspotOptimizer();
         optimizer.optimize(searchResults);
     }
 
@@ -64,39 +83,25 @@ public class BugsTest {
         return asset;
     }
 
-    private AssetVendor makeVendor(AssetVendorRelationshipLevel relationshipLevel) {
-        return new AssetVendor(string(), string(), relationshipLevel, anyLong());
-    }
-
-    private static Money money() {
-        return new Money(new BigDecimal(anyLong()));
-    }
-
-    private static URI URI() {
-        return URI.create("https://" + string());
-    }
-
-    private static String string() {
-        return UUID.randomUUID().toString();
-    }
-
-    private static long anyLong() {
-        return random.nextInt();
-    }
-
-    private static AssetPurchaseInfo assetPurchaseInfo() {
-        return new AssetPurchaseInfo(anyLong(), anyLong(), money(), money());
-    }
-
-    private static List<AssetTopic> setOfTopics() {
-        var result = new ArrayList<AssetTopic>();
-        for (var count = 1 + random.nextInt(4); count > 0; --count)
-            result.add(anyTopic());
-
+    private List<Asset> givenAssetsWithTopics(AssetVendor vendor, int count, AssetTopic... topics) {
+        var result = new ArrayList<Asset>();
+        for (var i = 0; i < count; ++i) {
+            result.add(givenAssetWithTopics(vendor, topics));
+        }
         return result;
     }
 
-    static AssetTopic anyTopic() {
-        return new AssetTopic(string(), string());
+    private Asset givenAssetWithTopics(AssetVendor vendor, AssetTopic... topics) {
+        var actualTopics = new ArrayList<AssetTopic>();
+        for (var topic : topics) {
+            actualTopics.add(new AssetTopic(topic.getId(), topic.getDisplayName()));
+        }
+        var result = new Asset(string(), string(), URI(), URI(), assetPurchaseInfo(), assetPurchaseInfo(), actualTopics, vendor);
+        searchResults.addFound(result);
+        return result;
+    }
+
+    private AssetVendor makeVendor(AssetVendorRelationshipLevel relationshipLevel) {
+        return new AssetVendor(string(), string(), relationshipLevel, anyLong());
     }
 }

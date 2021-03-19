@@ -30,34 +30,35 @@ class TopicsBasedOptimizer {
             if (getHottestTopicIn(asset, hotTopics) != null)
                 searchResults.getHotspot(Highlight).addMember(asset);
 
-            // any topic wins first time
-            if (hotTopic == null)
-                hotTopic = getHottestTopicIn(asset, hotTopics);
-
-            // get hottest topic for this asset and start processing for showcase/top picks
-            AssetTopic assetHotTopic = getHottestTopicIn(asset, hotTopics);
-            if (assetHotTopic != null) {
-                if (isHotterTopic(assetHotTopic, hotTopic, hotTopics)) {
-                    // move showcase assets to top picks & switch to this topic
-                    for (var surplusAsset : showcaseAssets)
-                        searchResults.getHotspot(TopPicks).addMember(surplusAsset);
-                    // done. reset showcase and switch to tpic
-                    showcaseAssets.clear();
-                    hotTopic = assetHotTopic;
-                    showcased = 0;
-                }
-
-                // add asset to showcase candidates list
-                if (assetHotTopic == hotTopic)
-                    showcaseAssets.add(asset);
-            } else {
-                // try another
-                continue;
-            }
-
             // enough to claim
-            if (++showcased > 2)
-                break;
+            if (showcased < 3) {
+
+                // any topic wins first time
+                if (hotTopic == null)
+                    hotTopic = getHottestTopicIn(asset, hotTopics);
+
+                // get hottest topic for this asset and start processing for showcase/top picks
+                AssetTopic assetHotTopic = getHottestTopicIn(asset, hotTopics);
+                if (assetHotTopic != null) {
+                    if (isHotterTopic(assetHotTopic, hotTopic, hotTopics)) {
+                        // move showcase assets to top picks & switch to this topic
+                        for (var surplusAsset : showcaseAssets)
+                            searchResults.getHotspot(TopPicks).addMember(surplusAsset);
+                        // done. reset showcase and switch to tpic
+                        showcaseAssets.clear();
+                        hotTopic = assetHotTopic;
+                        showcased = 0;
+                    }
+
+                    // add asset to showcase candidates list
+                    if (assetHotTopic == hotTopic)
+                        showcaseAssets.add(asset);
+                } else {
+                    // try another
+                    continue;
+                }
+                ++showcased;
+            }
         }
 
         // add our showcase assets to the hotspot
